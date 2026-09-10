@@ -37,6 +37,18 @@ func (Adapter) RecoverRefund(context.Context, string, core.CreateRefundCommand) 
 func (Adapter) GetRefund(context.Context, string, string) (core.ProviderRefund, error) {
 	return core.ProviderRefund{}, core.ErrUnsupported
 }
+func (Adapter) CreatePayout(context.Context, core.CreatePayoutCommand) (core.ProviderPayout, error) {
+	return core.ProviderPayout{}, fmt.Errorf("%w: implement provider CreatePayout", core.ErrUnsupported)
+}
+func (Adapter) RecoverPayout(context.Context, core.CreatePayoutCommand) (core.ProviderPayout, error) {
+	return core.ProviderPayout{}, core.ErrUnsupported
+}
+func (Adapter) GetPayout(context.Context, string, string) (core.ProviderPayout, error) {
+	return core.ProviderPayout{}, core.ErrUnsupported
+}
+func (Adapter) CancelPayout(context.Context, core.CancelPayoutCommand, string) (core.ProviderPayout, error) {
+	return core.ProviderPayout{}, core.ErrUnsupported
+}
 func (Adapter) ParseWebhook(context.Context, core.RawWebhook) ([]core.ProviderEvent, error) {
 	return nil, core.ErrUnsupported
 }

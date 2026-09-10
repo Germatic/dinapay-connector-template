@@ -10,9 +10,12 @@ import (
 )
 
 type providerStub struct {
-	creates   int
-	createErr error
-	recovered core.ProviderPayment
+	creates         int
+	createErr       error
+	recovered       core.ProviderPayment
+	payoutCreates   int
+	payoutCreateErr error
+	payoutRecovered core.ProviderPayout
 }
 
 func (providerStub) Capabilities(context.Context) core.Capabilities {
@@ -45,6 +48,25 @@ func (providerStub) RecoverRefund(context.Context, string, core.CreateRefundComm
 }
 func (providerStub) GetRefund(context.Context, string, string) (core.ProviderRefund, error) {
 	return core.ProviderRefund{}, core.ErrUnsupported
+}
+func (p *providerStub) CreatePayout(_ context.Context, c core.CreatePayoutCommand) (core.ProviderPayout, error) {
+	p.payoutCreates++
+	if p.payoutCreateErr != nil {
+		return core.ProviderPayout{}, p.payoutCreateErr
+	}
+	return core.ProviderPayout{PayoutID: c.PayoutID, Provider: "test", ProviderConnectionID: c.ProviderConnectionID, ProviderPayoutID: "provider-payout-1", Status: "processing", Source: c.Source, ObservedAt: time.Now()}, nil
+}
+func (p *providerStub) RecoverPayout(context.Context, core.CreatePayoutCommand) (core.ProviderPayout, error) {
+	if p.payoutRecovered.ProviderPayoutID == "" {
+		return core.ProviderPayout{}, core.ErrNotFound
+	}
+	return p.payoutRecovered, nil
+}
+func (providerStub) GetPayout(context.Context, string, string) (core.ProviderPayout, error) {
+	return core.ProviderPayout{}, core.ErrUnsupported
+}
+func (providerStub) CancelPayout(context.Context, core.CancelPayoutCommand, string) (core.ProviderPayout, error) {
+	return core.ProviderPayout{}, core.ErrUnsupported
 }
 
 func TestCreatePaymentRecoversAmbiguousTimeout(t *testing.T) {
@@ -81,5 +103,46 @@ func TestCreatePaymentIdempotency(t *testing.T) {
 	_, _, err = s.CreatePayment(context.Background(), "key-1", cmd)
 	if err != core.ErrConflict {
 		t.Fatalf("conflict err=%v", err)
+	}
+}
+
+func TestCreatePayoutIdempotency(t *testing.T) {
+	p := &providerStub{}
+	s := New(p, memory.New(), nil)
+	cmd := payoutCommand("op-payout-1", "payout-1")
+	first, replayed, err := s.CreatePayout(context.Background(), "payout-key-1", cmd)
+	if err != nil || replayed {
+		t.Fatalf("first: replay=%v err=%v", replayed, err)
+	}
+	second, replayed, err := s.CreatePayout(context.Background(), "payout-key-1", cmd)
+	if err != nil || !replayed || first.ProviderPayoutID != second.ProviderPayoutID || p.payoutCreates != 1 {
+		t.Fatalf("replay=%v creates=%d err=%v", replayed, p.payoutCreates, err)
+	}
+	cmd.Source.Amount = "11.00"
+	if _, _, err = s.CreatePayout(context.Background(), "payout-key-1", cmd); err != core.ErrConflict {
+		t.Fatalf("conflict err=%v", err)
+	}
+}
+
+func TestCreatePayoutRecoversAmbiguousTimeout(t *testing.T) {
+	p := &providerStub{payoutCreateErr: core.ErrUnavailable}
+	s := New(p, memory.New(), nil)
+	cmd := payoutCommand("op-payout-timeout", "payout-timeout")
+	if _, _, err := s.CreatePayout(context.Background(), "payout-key-timeout", cmd); err != core.ErrUnavailable {
+		t.Fatalf("first err=%v", err)
+	}
+	p.payoutCreateErr = nil
+	p.payoutRecovered = core.ProviderPayout{PayoutID: cmd.PayoutID, Provider: "test", ProviderConnectionID: cmd.ProviderConnectionID, ProviderPayoutID: "recovered-payout-1", Status: "processing", Source: cmd.Source, ObservedAt: time.Now()}
+	result, replayed, err := s.CreatePayout(context.Background(), "payout-key-timeout", cmd)
+	if err != nil || !replayed || result.ProviderPayoutID != "recovered-payout-1" || p.payoutCreates != 1 {
+		t.Fatalf("result=%#v replay=%v creates=%d err=%v", result, replayed, p.payoutCreates, err)
+	}
+}
+
+func payoutCommand(operationID, payoutID string) core.CreatePayoutCommand {
+	return core.CreatePayoutCommand{
+		OperationID: operationID, PayoutID: payoutID, ProviderConnectionID: "connection-1",
+		Source:      core.Money{Amount: "10.00", Currency: "USD"},
+		Destination: core.PayoutDestination{Country: "VE", Currency: "VES", Beneficiary: map[string]any{"firstName": "Ana"}, Rail: map[string]any{"type": "bank_account"}},
 	}
 }

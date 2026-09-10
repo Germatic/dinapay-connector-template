@@ -28,6 +28,9 @@ func New(service *app.Service, token string) http.Handler {
 	mux.HandleFunc("POST /v1/payments/{providerPaymentId}/cancel", s.auth(s.cancelPayment))
 	mux.HandleFunc("POST /v1/payments/{providerPaymentId}/refunds", s.auth(s.createRefund))
 	mux.HandleFunc("GET /v1/refunds/{providerRefundId}", s.auth(s.getRefund))
+	mux.HandleFunc("POST /v1/payouts", s.auth(s.createPayout))
+	mux.HandleFunc("GET /v1/payouts/{providerPayoutId}", s.auth(s.getPayout))
+	mux.HandleFunc("POST /v1/payouts/{providerPayoutId}/cancel", s.auth(s.cancelPayout))
 	mux.HandleFunc("POST /webhooks/{connectionId}", s.webhook)
 	return mux
 }
@@ -103,6 +106,45 @@ func (s *Server) createRefund(w http.ResponseWriter, r *http.Request) {
 }
 func (s *Server) getRefund(w http.ResponseWriter, r *http.Request) {
 	result, err := s.service.GetRefund(r.Context(), r.Header.Get("Provider-Connection-Id"), r.PathValue("providerRefundId"))
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	write(w, 200, result)
+}
+func (s *Server) createPayout(w http.ResponseWriter, r *http.Request) {
+	var cmd core.CreatePayoutCommand
+	if err := decode(w, r, &cmd); err != nil {
+		problem(w, 400, "invalid_request", err.Error())
+		return
+	}
+	result, replayed, err := s.service.CreatePayout(r.Context(), r.Header.Get("Idempotency-Key"), cmd)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	if replayed {
+		w.Header().Set("Idempotent-Replayed", "true")
+		write(w, 200, result)
+		return
+	}
+	write(w, 201, result)
+}
+func (s *Server) getPayout(w http.ResponseWriter, r *http.Request) {
+	result, err := s.service.GetPayout(r.Context(), r.Header.Get("Provider-Connection-Id"), r.PathValue("providerPayoutId"))
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	write(w, 200, result)
+}
+func (s *Server) cancelPayout(w http.ResponseWriter, r *http.Request) {
+	var cmd core.CancelPayoutCommand
+	if err := decode(w, r, &cmd); err != nil {
+		problem(w, 400, "invalid_request", err.Error())
+		return
+	}
+	result, err := s.service.CancelPayout(r.Context(), r.PathValue("providerPayoutId"), cmd)
 	if err != nil {
 		mapError(w, err)
 		return

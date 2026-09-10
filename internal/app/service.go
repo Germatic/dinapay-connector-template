@@ -114,6 +114,53 @@ func (s *Service) GetRefund(ctx context.Context, connection, id string) (core.Pr
 	return result, err
 }
 
+func (s *Service) CreatePayout(ctx context.Context, key string, cmd core.CreatePayoutCommand) (core.ProviderPayout, bool, error) {
+	if key == "" || cmd.OperationID == "" || cmd.PayoutID == "" || cmd.ProviderConnectionID == "" || cmd.Source.Amount == "" || cmd.Source.Currency == "" || cmd.Destination.Country == "" || cmd.Destination.Currency == "" {
+		return core.ProviderPayout{}, false, core.ErrRejected
+	}
+	existing, err := s.store.ReservePayout(ctx, cmd.ProviderConnectionID, key, hash(cmd))
+	if errors.Is(err, core.ErrInProgress) {
+		result, recoverErr := s.provider.RecoverPayout(ctx, cmd)
+		if recoverErr != nil {
+			return core.ProviderPayout{}, false, recoverErr
+		}
+		if recoverErr = s.store.CompletePayout(ctx, key, result); recoverErr != nil {
+			return core.ProviderPayout{}, false, recoverErr
+		}
+		return result, true, nil
+	}
+	if err != nil {
+		return core.ProviderPayout{}, false, err
+	}
+	if existing != nil {
+		return *existing, true, nil
+	}
+	result, err := s.provider.CreatePayout(ctx, cmd)
+	if err != nil {
+		// Preserve ambiguous reservations so retries recover instead of duplicating a transfer.
+		if !errors.Is(err, core.ErrUnavailable) {
+			_ = s.store.FailPayout(context.WithoutCancel(ctx), cmd.ProviderConnectionID, key)
+		}
+		return core.ProviderPayout{}, false, err
+	}
+	if err = s.store.CompletePayout(ctx, key, result); err != nil {
+		return core.ProviderPayout{}, false, err
+	}
+	return result, false, nil
+}
+
+func (s *Service) GetPayout(ctx context.Context, connection, id string) (core.ProviderPayout, error) {
+	result, err := s.provider.GetPayout(ctx, connection, id)
+	if errors.Is(err, core.ErrUnsupported) {
+		return s.store.FindPayout(ctx, connection, id)
+	}
+	return result, err
+}
+
+func (s *Service) CancelPayout(ctx context.Context, id string, cmd core.CancelPayoutCommand) (core.ProviderPayout, error) {
+	return s.provider.CancelPayout(ctx, cmd, id)
+}
+
 func (s *Service) HandleWebhook(ctx context.Context, raw core.RawWebhook) error {
 	events, err := s.provider.ParseWebhook(ctx, raw)
 	if err != nil {

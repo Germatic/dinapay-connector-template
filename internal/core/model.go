@@ -46,6 +46,38 @@ type CreateRefundCommand struct {
 	Metadata             map[string]any `json:"metadata,omitempty"`
 }
 
+type Money struct {
+	Amount   string `json:"amount"`
+	Currency string `json:"currency"`
+}
+
+type PayoutDestination struct {
+	Country     string         `json:"country"`
+	Currency    string         `json:"currency"`
+	Beneficiary map[string]any `json:"beneficiary"`
+	Rail        map[string]any `json:"rail"`
+}
+
+type CreatePayoutCommand struct {
+	OperationID          string            `json:"operationId"`
+	PayoutID             string            `json:"payoutId"`
+	Provider             string            `json:"provider"`
+	ProviderConnectionID string            `json:"providerConnectionId"`
+	Binding              *Binding          `json:"binding,omitempty"`
+	Source               Money             `json:"source"`
+	Destination          PayoutDestination `json:"destination"`
+	Remitter             map[string]any    `json:"remitter,omitempty"`
+	Description          string            `json:"description,omitempty"`
+	Metadata             map[string]any    `json:"metadata,omitempty"`
+}
+
+type CancelPayoutCommand struct {
+	OperationID          string `json:"operationId"`
+	PayoutID             string `json:"payoutId"`
+	ProviderConnectionID string `json:"providerConnectionId"`
+	Reason               string `json:"reason,omitempty"`
+}
+
 type ProviderPayment struct {
 	TransactionID        string         `json:"transactionId"`
 	Provider             string         `json:"provider"`
@@ -74,6 +106,21 @@ type ProviderRefund struct {
 	ProviderData         map[string]any `json:"providerData,omitempty"`
 }
 
+type ProviderPayout struct {
+	PayoutID             string         `json:"payoutId"`
+	Provider             string         `json:"provider"`
+	ProviderConnectionID string         `json:"providerConnectionId"`
+	ProviderPayoutID     string         `json:"providerPayoutId"`
+	ProviderReference    string         `json:"providerReference,omitempty"`
+	Status               string         `json:"status"`
+	RawStatus            string         `json:"rawStatus,omitempty"`
+	Source               Money          `json:"source"`
+	DestinationAmount    string         `json:"destinationAmount,omitempty"`
+	DestinationCurrency  string         `json:"destinationCurrency,omitempty"`
+	ObservedAt           time.Time      `json:"observedAt"`
+	ProviderData         map[string]any `json:"providerData,omitempty"`
+}
+
 type Capabilities struct {
 	Provider        string       `json:"provider"`
 	ContractVersion string       `json:"contractVersion"`
@@ -81,14 +128,16 @@ type Capabilities struct {
 }
 
 type Capability struct {
-	Operation          string              `json:"operation"`
-	Countries          []string            `json:"countries"`
-	Currencies         []string            `json:"currencies"`
-	PaymentMethods     []string            `json:"paymentMethods"`
-	Rails              []string            `json:"rails"`
-	DestinationModes   []string            `json:"destinationModes,omitempty"`
-	Features           []string            `json:"features,omitempty"`
-	BindingRequirement *BindingRequirement `json:"bindingRequirement,omitempty"`
+	Operation             string              `json:"operation"`
+	Countries             []string            `json:"countries"`
+	Currencies            []string            `json:"currencies,omitempty"`
+	SourceCurrencies      []string            `json:"sourceCurrencies,omitempty"`
+	DestinationCurrencies []string            `json:"destinationCurrencies,omitempty"`
+	PaymentMethods        []string            `json:"paymentMethods,omitempty"`
+	Rails                 []string            `json:"rails"`
+	DestinationModes      []string            `json:"destinationModes,omitempty"`
+	Features              []string            `json:"features,omitempty"`
+	BindingRequirement    *BindingRequirement `json:"bindingRequirement,omitempty"`
 }
 
 type BindingRequirement struct {
@@ -103,10 +152,12 @@ type ProviderEvent struct {
 	Source               string         `json:"source"`
 	OccurredAt           time.Time      `json:"occurredAt"`
 	ObservedAt           time.Time      `json:"observedAt"`
-	TransactionID        string         `json:"transactionId"`
+	TransactionID        string         `json:"transactionId,omitempty"`
+	PayoutID             string         `json:"payoutId,omitempty"`
 	Provider             string         `json:"provider"`
 	ProviderConnectionID string         `json:"providerConnectionId"`
-	ProviderPaymentID    string         `json:"providerPaymentId"`
+	ProviderPaymentID    string         `json:"providerPaymentId,omitempty"`
+	ProviderPayoutID     string         `json:"providerPayoutId,omitempty"`
 	Data                 map[string]any `json:"data"`
 }
 

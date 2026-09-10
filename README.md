@@ -19,9 +19,15 @@ must not import or modify Dinapay V2 or routing code.
    same normalized events as webhooks.
 8. Run the acceptance matrix in `dinapay-contracts/docs/connector-implementation-guide.md`.
 
-`RecoverPayment` and `RecoverRefund` are mandatory safety hooks. They query the
+`RecoverPayment`, `RecoverRefund` and `RecoverPayout` are mandatory safety hooks for
+the operations a connector declares. They query the
 provider using the stable canonical `operationId` after an ambiguous timeout;
 they must not create a new provider operation.
+
+A connector may be pay-in-only, payout-only, or support both. Its capability
+manifest is authoritative: declare only implemented operations and return
+`unsupported` for operations the provider does not support. Adding a provider
+must not require changes to Dinapay V2 or the router.
 
 Provider-specific code should normally be limited to:
 
@@ -37,7 +43,7 @@ internal/provider/<provider>/
 ## Generic components included
 
 - Connector V1 HTTP surface and service-token authentication.
-- Canonical payment, refund, binding and event models.
+- Canonical payment, refund, payout, binding and event models.
 - Provider adapter, store and event-publisher ports.
 - Idempotency reservation and replay behavior.
 - Webhook body limits and inbox deduplication hook.

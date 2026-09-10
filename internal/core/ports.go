@@ -24,6 +24,10 @@ type ProviderAdapter interface {
 	CreateRefund(context.Context, string, CreateRefundCommand) (ProviderRefund, error)
 	RecoverRefund(context.Context, string, CreateRefundCommand) (ProviderRefund, error)
 	GetRefund(context.Context, string, string) (ProviderRefund, error)
+	CreatePayout(context.Context, CreatePayoutCommand) (ProviderPayout, error)
+	RecoverPayout(context.Context, CreatePayoutCommand) (ProviderPayout, error)
+	GetPayout(context.Context, string, string) (ProviderPayout, error)
+	CancelPayout(context.Context, CancelPayoutCommand, string) (ProviderPayout, error)
 	ParseWebhook(context.Context, RawWebhook) ([]ProviderEvent, error)
 }
 
@@ -36,6 +40,10 @@ type Store interface {
 	CompleteRefund(context.Context, string, ProviderRefund) error
 	FailRefund(context.Context, string, string) error
 	FindRefund(context.Context, string, string) (ProviderRefund, error)
+	ReservePayout(context.Context, string, string, []byte) (*ProviderPayout, error)
+	CompletePayout(context.Context, string, ProviderPayout) error
+	FailPayout(context.Context, string, string) error
+	FindPayout(context.Context, string, string) (ProviderPayout, error)
 	RecordEvent(context.Context, ProviderEvent, []byte) (bool, error)
 }
 
