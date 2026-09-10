@@ -19,11 +19,11 @@ type Store struct {
 	payments map[string]operation[core.ProviderPayment]
 	refunds  map[string]operation[core.ProviderRefund]
 	payouts  map[string]operation[core.ProviderPayout]
-	events   map[string]struct{}
+	events   map[string]bool
 }
 
 func New() *Store {
-	return &Store{payments: map[string]operation[core.ProviderPayment]{}, refunds: map[string]operation[core.ProviderRefund]{}, payouts: map[string]operation[core.ProviderPayout]{}, events: map[string]struct{}{}}
+	return &Store{payments: map[string]operation[core.ProviderPayment]{}, refunds: map[string]operation[core.ProviderRefund]{}, payouts: map[string]operation[core.ProviderPayout]{}, events: map[string]bool{}}
 }
 
 func scope(connection, key string) string { return connection + ":" + key }
@@ -169,9 +169,18 @@ func (s *Store) FindPayout(_ context.Context, connection, id string) (core.Provi
 func (s *Store) RecordEvent(_ context.Context, event core.ProviderEvent, _ []byte) (bool, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if _, ok := s.events[event.EventID]; ok {
-		return false, nil
+	if published, ok := s.events[event.EventID]; ok {
+		return !published, nil
 	}
-	s.events[event.EventID] = struct{}{}
+	s.events[event.EventID] = false
 	return true, nil
+}
+func (s *Store) CompleteEvent(_ context.Context, id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, ok := s.events[id]; !ok {
+		return core.ErrNotFound
+	}
+	s.events[id] = true
+	return nil
 }

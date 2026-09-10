@@ -45,6 +45,7 @@ type Store interface {
 	FailPayout(context.Context, string, string) error
 	FindPayout(context.Context, string, string) (ProviderPayout, error)
 	RecordEvent(context.Context, ProviderEvent, []byte) (bool, error)
+	CompleteEvent(context.Context, string) error
 }
 
 type EventPublisher interface {

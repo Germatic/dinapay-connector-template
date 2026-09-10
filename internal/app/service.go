@@ -175,6 +175,9 @@ func (s *Service) HandleWebhook(ctx context.Context, raw core.RawWebhook) error 
 			if err = s.publisher.Publish(ctx, event); err != nil {
 				return err
 			}
+			if err = s.store.CompleteEvent(ctx, event.EventID); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
