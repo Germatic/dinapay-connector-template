@@ -61,6 +61,8 @@ type PayoutDestination struct {
 type CreatePayoutCommand struct {
 	OperationID          string            `json:"operationId"`
 	PayoutID             string            `json:"payoutId"`
+	AccountID            string            `json:"accountId"`
+	MerchantID           string            `json:"merchantId"`
 	Provider             string            `json:"provider"`
 	ProviderConnectionID string            `json:"providerConnectionId"`
 	Binding              *Binding          `json:"binding,omitempty"`
