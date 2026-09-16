@@ -18,6 +18,7 @@ must not import or modify Dinapay V2 or routing code.
 7. Add a reconciler that queries non-terminal operations and publishes the
    same normalized events as webhooks.
 8. Run the acceptance matrix in `dinapay-contracts/docs/connector-implementation-guide.md`.
+9. Implement provider error mapping according to `docs/FAILURE_MAPPING.md`.
 
 `RecoverPayment`, `RecoverRefund` and `RecoverPayout` are mandatory safety hooks for
 the operations a connector declares. They query the
@@ -50,6 +51,7 @@ internal/provider/<provider>/
 - HTTP publisher for normalized provider events.
 - Health/readiness endpoints and bounded HTTP server timeouts.
 - Local memory adapter and an idempotency test.
+- Version-pinned normalized payment and payout failure catalogs.
 - Docker image and CI test workflow.
 
 ## Required production work
