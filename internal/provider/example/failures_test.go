@@ -22,3 +22,13 @@ func TestUnknownPayoutFailureFallsBack(t *testing.T) {
 		t.Fatalf("public=%#v internal=%#v", public, internal)
 	}
 }
+
+func TestRefundFailureMappingUsesRefundCatalog(t *testing.T) {
+	public, internal := mapRefundFailure(nativeFailure{Code: "EXAMPLE_REFUND_REJECTED", Message: "native detail"})
+	if public.Code != string(contract.RefundRejected) || !contract.ValidRefund(public) {
+		t.Fatalf("public=%#v", public)
+	}
+	if internal.Code != "EXAMPLE_REFUND_REJECTED" || internal.Message != "native detail" {
+		t.Fatalf("internal=%#v", internal)
+	}
+}

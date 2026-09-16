@@ -101,17 +101,19 @@ type ProviderPayment struct {
 }
 
 type ProviderRefund struct {
-	RefundID             string         `json:"refundId"`
-	TransactionID        string         `json:"transactionId"`
-	Provider             string         `json:"provider"`
-	ProviderConnectionID string         `json:"providerConnectionId"`
-	ProviderRefundID     string         `json:"providerRefundId"`
-	Status               string         `json:"status"`
-	RawStatus            string         `json:"rawStatus,omitempty"`
-	Amount               string         `json:"amount"`
-	Currency             string         `json:"currency"`
-	ObservedAt           time.Time      `json:"observedAt"`
-	ProviderData         map[string]any `json:"providerData,omitempty"`
+	RefundID             string                    `json:"refundId"`
+	TransactionID        string                    `json:"transactionId"`
+	Provider             string                    `json:"provider"`
+	ProviderConnectionID string                    `json:"providerConnectionId"`
+	ProviderRefundID     string                    `json:"providerRefundId"`
+	Status               string                    `json:"status"`
+	RawStatus            string                    `json:"rawStatus,omitempty"`
+	Amount               string                    `json:"amount"`
+	Currency             string                    `json:"currency"`
+	ObservedAt           time.Time                 `json:"observedAt"`
+	ProviderData         map[string]any            `json:"providerData,omitempty"`
+	Failure              *contract.Failure         `json:"failure,omitempty"`
+	ProviderFailure      *contract.ProviderFailure `json:"providerFailure,omitempty"`
 }
 
 type ProviderPayout struct {
