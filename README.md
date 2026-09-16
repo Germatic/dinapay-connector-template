@@ -51,7 +51,7 @@ internal/provider/<provider>/
 - HTTP publisher for normalized provider events.
 - Health/readiness endpoints and bounded HTTP server timeouts.
 - Local memory adapter and an idempotency test.
-- Version-pinned normalized payment and payout failure catalogs.
+- Version-pinned normalized payment, refund and payout failure catalogs.
 - Docker image and CI test workflow.
 
 ## Required production work

@@ -25,3 +25,17 @@ func mapPayoutFailure(input nativeFailure) (contract.Failure, contract.ProviderF
 		return contract.NewPayout(contract.PayoutUnknownError), provider
 	}
 }
+
+func mapRefundFailure(input nativeFailure) (contract.Failure, contract.ProviderFailure) {
+	provider := contract.ProviderFailure{
+		Code:    input.Code,
+		Message: input.Message,
+		Details: map[string]any{"field": input.Field, "category": input.Category},
+	}
+	switch input.Code {
+	case "EXAMPLE_REFUND_REJECTED":
+		return contract.NewRefund(contract.RefundRejected), provider
+	default:
+		return contract.NewRefund(contract.RefundUnknownError), provider
+	}
+}
