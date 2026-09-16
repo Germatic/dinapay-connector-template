@@ -1,0 +1,3 @@
+# github.com/Germatic/dinapay-contracts/go/connectorcontract v0.2.0
+## explicit; go 1.24
+github.com/Germatic/dinapay-contracts/go/connectorcontract/failures
