@@ -49,6 +49,7 @@ internal/provider/<provider>/
 - Webhook body limits and inbox deduplication hook.
 - HTTP publisher for normalized provider events.
 - Health/readiness endpoints and bounded HTTP server timeouts.
+- Canonical runtime metadata on `GET /version` and inside `GET /health`.
 - Local memory adapter and an idempotency test.
 - Docker image and CI test workflow.
 
@@ -71,6 +72,7 @@ Then query:
 
 ```sh
 curl http://localhost:8092/health
+curl http://localhost:8092/version
 curl http://localhost:8092/v1/capabilities \
   -H 'Authorization: Bearer local-secret'
 ```
@@ -81,6 +83,20 @@ curl http://localhost:8092/v1/capabilities \
 - `DINAPAY_V2_URL`: orchestrator base URL; defaults to `http://localhost:8112`.
 - `PROVIDER_NAME`: placeholder capability name; replace with provider config.
 - `PORT`: defaults to `8092`.
+- `DINARIA_ENVIRONMENT`: runtime environment reported by `/version`.
+
+Production builds must inject reproducible metadata:
+
+```sh
+VERSION=$(git describe --tags --always --dirty)
+COMMIT=$(git rev-parse HEAD)
+BUILT_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+go build -trimpath -ldflags "-s -w \
+  -X github.com/Germatic/dinapay-connector-template/internal/buildinfo.Version=$VERSION \
+  -X github.com/Germatic/dinapay-connector-template/internal/buildinfo.Commit=$COMMIT \
+  -X github.com/Germatic/dinapay-connector-template/internal/buildinfo.BuiltAt=$BUILT_AT" \
+  -o connector ./cmd/connector
+```
 
 See the contracts repository for versioning, idempotency, event, tracing and
 financial recovery requirements.

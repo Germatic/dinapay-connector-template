@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Germatic/dinapay-connector-template/internal/app"
+	"github.com/Germatic/dinapay-connector-template/internal/buildinfo"
 	"github.com/Germatic/dinapay-connector-template/internal/core"
 )
 
@@ -20,7 +21,11 @@ type Server struct {
 func New(service *app.Service, token string) http.Handler {
 	s := &Server{service: service, serviceToken: token}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) { write(w, 200, map[string]string{"status": "up"}) })
+	info := buildinfo.Current("dinapay-connector-template")
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		write(w, 200, map[string]any{"status": "up", "build": info})
+	})
+	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) { write(w, 200, info) })
 	mux.HandleFunc("GET /ready", func(w http.ResponseWriter, _ *http.Request) { write(w, 200, map[string]string{"status": "ready"}) })
 	mux.HandleFunc("GET /v1/capabilities", s.auth(s.capabilities))
 	mux.HandleFunc("POST /v1/payments", s.auth(s.createPayment))
