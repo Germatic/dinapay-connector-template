@@ -100,3 +100,43 @@ go build -trimpath -ldflags "-s -w \
 
 See the contracts repository for versioning, idempotency, event, tracing and
 financial recovery requirements.
+
+## Confirmed payer data
+
+For `payment.provider_confirmed`, connectors should include the party that
+actually funded the payment in `data.payer` whenever the provider supplies it.
+This is not the `customer` submitted when the order was created and must never
+be populated by copying or guessing customer data.
+
+All fields are optional. Omit unavailable fields; confirmation must not fail
+because a provider does not disclose payer identity.
+
+```json
+{
+  "eventType": "payment.provider_confirmed",
+  "data": {
+    "status": "confirmed",
+    "payer": {
+      "name": "Juan Perez",
+      "externalId": "provider-payer-123",
+      "documentType": "CUIT",
+      "documentNumber": "20234567897",
+      "accountIdentifier": {
+        "type": "cbu",
+        "value": "0070000000000000000000"
+      },
+      "institution": {
+        "type": "bank",
+        "code": "007",
+        "name": "Banco de ejemplo"
+      }
+    }
+  }
+}
+```
+
+For a wallet payment, use `institution.type = "wallet"`. Account identifier
+types are country/rail values such as `cbu`, `cvu`, `clabe` or `pix`; do not
+force identifiers from different schemes into one type. Keep the complete
+provider-native confirmation internally for audit, while publishing only the
+canonical payer fields to Dinapay.

@@ -147,6 +147,29 @@ type BindingRequirement struct {
 	ExternalEntityType string `json:"externalEntityType"`
 }
 
+// Payer describes the party that actually funded a confirmed payment. It is
+// distinct from the customer supplied when the order was created. Connectors
+// must populate only fields explicitly returned by the provider.
+type Payer struct {
+	Name              string             `json:"name,omitempty"`
+	ExternalID        string             `json:"externalId,omitempty"`
+	DocumentType      string             `json:"documentType,omitempty"`
+	DocumentNumber    string             `json:"documentNumber,omitempty"`
+	AccountIdentifier *AccountIdentifier `json:"accountIdentifier,omitempty"`
+	Institution       *Institution       `json:"institution,omitempty"`
+}
+
+type AccountIdentifier struct {
+	Type  string `json:"type"`
+	Value string `json:"value"`
+}
+
+type Institution struct {
+	Type string `json:"type"`
+	Code string `json:"code,omitempty"`
+	Name string `json:"name,omitempty"`
+}
+
 type ProviderEvent struct {
 	EventID              string         `json:"eventId"`
 	EventType            string         `json:"eventType"`
