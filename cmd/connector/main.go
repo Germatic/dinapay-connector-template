@@ -9,11 +9,13 @@ import (
 	"github.com/Germatic/dinapay-connector-template/internal/adapters/memory"
 	"github.com/Germatic/dinapay-connector-template/internal/adapters/publisher"
 	"github.com/Germatic/dinapay-connector-template/internal/app"
+	"github.com/Germatic/dinapay-connector-template/internal/buildinfo"
 	"github.com/Germatic/dinapay-connector-template/internal/provider/example"
 	"github.com/Germatic/dinapay-connector-template/internal/transport/httpapi"
 )
 
 func main() {
+	buildinfo.Environment = env("ENVIRONMENT", buildinfo.Environment)
 	port := env("PORT", "8092")
 	token := os.Getenv("SERVICE_TOKEN")
 	orchestrator := env("DINAPAY_V2_URL", "http://localhost:8112")

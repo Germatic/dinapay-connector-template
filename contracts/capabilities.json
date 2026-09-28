@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "1",
+  "provider": "replace-me",
+  "contractVersion": "connector-v1",
+  "capabilities": [
+    {
+      "operation": "payment",
+      "countries": ["XX"],
+      "currencies": ["XXX"],
+      "paymentMethods": ["bank_transfer"],
+      "rails": ["replace_me"],
+      "destinationModes": ["single_use"],
+      "features": []
+    }
+  ]
+}
