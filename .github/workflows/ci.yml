@@ -16,5 +16,21 @@ jobs:
         with:
           go-version: "1.24.x"
           cache: true
+      - name: Verify connector contract
+        run: ./scripts/verify-connector.sh
+      - name: Check release scripts
+        run: |
+          bash -n scripts/*.sh
+          shellcheck scripts/*.sh
       - run: go test -race ./...
       - run: go vet ./...
+      - name: Build versioned artifact
+        run: make build ENVIRONMENT=ci
+      - name: Verify release metadata generation
+        env:
+          PROVIDER: template-ci
+          REPOSITORY: github.com/Germatic/dinapay-connector-template
+          ARTIFACT: bin/connector
+          PROCESS_NAME: connector-template-ci
+          PORT: "8092"
+        run: ./scripts/render-release-component.sh | jq -e '.sha256 | test("^[a-f0-9]{64}$")'

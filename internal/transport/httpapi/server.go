@@ -6,22 +6,32 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"github.com/Germatic/dinapay-connector-template/internal/app"
+	"github.com/Germatic/dinapay-connector-template/internal/buildinfo"
 	"github.com/Germatic/dinapay-connector-template/internal/core"
 )
 
 type Server struct {
 	service      *app.Service
 	serviceToken string
+	startedAt    time.Time
+	requests     atomic.Uint64
 }
 
 func New(service *app.Service, token string) http.Handler {
-	s := &Server{service: service, serviceToken: token}
+	s := &Server{service: service, serviceToken: token, startedAt: time.Now()}
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) { write(w, 200, map[string]string{"status": "up"}) })
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
+		write(w, 200, map[string]any{"status": "up", "build": buildinfo.Current()})
+	})
 	mux.HandleFunc("GET /ready", func(w http.ResponseWriter, _ *http.Request) { write(w, 200, map[string]string{"status": "ready"}) })
+	mux.HandleFunc("GET /version", func(w http.ResponseWriter, _ *http.Request) { write(w, 200, buildinfo.Current()) })
+	mux.HandleFunc("GET /metrics", s.metrics)
 	mux.HandleFunc("GET /v1/capabilities", s.auth(s.capabilities))
 	mux.HandleFunc("POST /v1/payments", s.auth(s.createPayment))
 	mux.HandleFunc("GET /v1/payments/{providerPaymentId}", s.auth(s.getPayment))
@@ -32,7 +42,34 @@ func New(service *app.Service, token string) http.Handler {
 	mux.HandleFunc("GET /v1/payouts/{providerPayoutId}", s.auth(s.getPayout))
 	mux.HandleFunc("POST /v1/payouts/{providerPayoutId}/cancel", s.auth(s.cancelPayout))
 	mux.HandleFunc("POST /webhooks/{connectionId}", s.webhook)
-	return mux
+	return s.instrument(mux)
+}
+
+func (s *Server) instrument(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.requests.Add(1)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *Server) metrics(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	info := buildinfo.Current()
+	_, _ = io.WriteString(w, "# HELP dinapay_connector_build_info Connector build identity.\n")
+	_, _ = io.WriteString(w, "# TYPE dinapay_connector_build_info gauge\n")
+	_, _ = io.WriteString(w, `dinapay_connector_build_info{service="`+metricLabel(info.Service)+`",version="`+metricLabel(info.Version)+`",commit="`+metricLabel(info.Commit)+`"} 1`+"\n")
+	_, _ = io.WriteString(w, "# HELP dinapay_connector_http_requests_total HTTP requests received.\n")
+	_, _ = io.WriteString(w, "# TYPE dinapay_connector_http_requests_total counter\n")
+	_, _ = io.WriteString(w, "dinapay_connector_http_requests_total "+strconv.FormatUint(s.requests.Load(), 10)+"\n")
+	_, _ = io.WriteString(w, "# HELP dinapay_connector_uptime_seconds Process uptime.\n")
+	_, _ = io.WriteString(w, "# TYPE dinapay_connector_uptime_seconds gauge\n")
+	_, _ = io.WriteString(w, "dinapay_connector_uptime_seconds "+strconv.FormatInt(int64(time.Since(s.startedAt).Seconds()), 10)+"\n")
+}
+
+func metricLabel(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	value = strings.ReplaceAll(value, `"`, `\"`)
+	return strings.ReplaceAll(value, "\n", `\n`)
 }
 func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

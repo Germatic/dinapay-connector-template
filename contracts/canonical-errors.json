@@ -1,0 +1,13 @@
+{
+  "schemaVersion": "1",
+  "provider": "replace-me",
+  "mappings": [
+    {
+      "operation": "payment",
+      "providerCode": "REPLACE_ME",
+      "canonicalCode": "provider_rejected",
+      "category": "business",
+      "notes": "Replace with the provider-specific mapping. Do not expose provider identity in the public error."
+    }
+  ]
+}

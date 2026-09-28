@@ -18,6 +18,8 @@ must not import or modify Dinapay V2 or routing code.
 7. Add a reconciler that queries non-terminal operations and publishes the
    same normalized events as webhooks.
 8. Run the acceptance matrix in `dinapay-contracts/docs/connector-implementation-guide.md`.
+9. Replace every placeholder in `contracts/` and `deploy/`. CI rejects
+   placeholders automatically after the Go module stops being the template.
 
 `RecoverPayment`, `RecoverRefund` and `RecoverPayout` are mandatory safety hooks for
 the operations a connector declares. They query the
@@ -49,6 +51,9 @@ internal/provider/<provider>/
 - Webhook body limits and inbox deduplication hook.
 - HTTP publisher for normalized provider events.
 - Health/readiness endpoints and bounded HTTP server timeouts.
+- Canonical `/version` build identity and low-cost Prometheus `/metrics`.
+- Declarative capability and canonical-error manifests.
+- Reproducible build metadata and release-component generation.
 - Local memory adapter and an idempotency test.
 - Docker image and CI test workflow.
 
@@ -63,7 +68,7 @@ checks. Never acknowledge an unverified provider webhook.
 ## Local verification
 
 ```sh
-make test
+make verify test build
 SERVICE_TOKEN=local-secret PROVIDER_NAME=my-provider go run ./cmd/connector
 ```
 
@@ -71,6 +76,8 @@ Then query:
 
 ```sh
 curl http://localhost:8092/health
+curl http://localhost:8092/version
+curl http://localhost:8092/metrics
 curl http://localhost:8092/v1/capabilities \
   -H 'Authorization: Bearer local-secret'
 ```
@@ -84,3 +91,20 @@ curl http://localhost:8092/v1/capabilities \
 
 See the contracts repository for versioning, idempotency, event, tracing and
 financial recovery requirements.
+
+## Release metadata
+
+The build injects service, repository, version, commit, timestamp and
+environment into `/version`. Generate the fragment consumed by Dinaria's
+atomic release pipeline with:
+
+```sh
+make release-component \
+  PROVIDER=my-provider \
+  REPOSITORY=github.com/Germatic/dinapay-connector-my-provider \
+  PROCESS_NAME=dinapay-connector-my-provider-v2 \
+  PORT=8092
+```
+
+The generated SHA-256 identifies the exact artifact approved in sandbox and
+later promoted to production. Do not edit that digest manually.

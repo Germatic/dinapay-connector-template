@@ -1,0 +1,12 @@
+{
+  "service": "dinapay-connector-REPLACE_PROVIDER",
+  "repository": "github.com/Germatic/dinapay-connector-REPLACE_PROVIDER",
+  "contractVersion": "connector-v1",
+  "commit": "REPLACE_GIT_COMMIT",
+  "sha256": "REPLACE_ARTIFACT_SHA256",
+  "artifactName": "dinapay-connector-REPLACE_PROVIDER",
+  "processManager": "pm2",
+  "processName": "dinapay-connector-REPLACE_PROVIDER-v2",
+  "healthUrl": "http://127.0.0.1:REPLACE_PORT/health",
+  "healthStatus": 200
+}
