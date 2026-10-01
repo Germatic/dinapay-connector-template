@@ -14,6 +14,9 @@ must not import or modify Dinapay V2 or routing code.
    for tests and local scaffolding only.
 4. Configure provider connections and credentials from a secret manager.
 5. Declare only capabilities that are actually implemented.
+6. Declare immutable provider data requirements with canonical Dinaria paths
+   in `dataRequirements`. Use `required` or `conditional`; keep provider field
+   names and fallback transformations inside the adapter.
 6. Implement and verify the provider webhook under `/webhooks/{connectionId}`.
 7. Add a reconciler that queries non-terminal operations and publishes the
    same normalized events as webhooks.

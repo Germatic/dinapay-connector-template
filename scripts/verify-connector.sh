@@ -11,7 +11,14 @@ jq -e '
   (.provider | type == "string" and length > 0) and
   (.contractVersion | type == "string" and length > 0) and
   (.capabilities | type == "array" and length > 0) and
-  ([.capabilities[] | (.operation | IN("payment", "refund", "payout"))] | all)
+  ([.capabilities[] |
+    (.operation | IN("payment", "refund", "payout")) and
+    ((.dataRequirements // []) | type == "array") and
+    ([((.dataRequirements // [])[]) |
+      (.path | type == "string" and contains(".")) and
+      (.presence | IN("required", "conditional"))
+    ] | all)
+  ] | all)
 ' contracts/capabilities.json >/dev/null
 
 jq -e '

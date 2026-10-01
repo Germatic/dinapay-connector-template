@@ -10,6 +10,9 @@
       "paymentMethods": ["bank_transfer"],
       "rails": ["replace_me"],
       "destinationModes": ["single_use"],
+	  "dataRequirements": [
+		{"path": "customer.documentNumber", "presence": "required"}
+	  ],
       "features": []
     }
   ]

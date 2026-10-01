@@ -140,6 +140,17 @@ type Capability struct {
 	DestinationModes      []string            `json:"destinationModes,omitempty"`
 	Features              []string            `json:"features,omitempty"`
 	BindingRequirement    *BindingRequirement `json:"bindingRequirement,omitempty"`
+	DataRequirements      []DataRequirement   `json:"dataRequirements,omitempty"`
+}
+
+// DataRequirement declares immutable provider requirements using canonical
+// Dinaria API paths. Provider payload field names belong in the adapter and
+// must never be exposed here.
+type DataRequirement struct {
+	Path        string         `json:"path"`
+	Presence    string         `json:"presence"`
+	Constraints map[string]any `json:"constraints,omitempty"`
+	When        map[string]any `json:"when,omitempty"`
 }
 
 type BindingRequirement struct {

@@ -14,6 +14,7 @@ func (a Adapter) Capabilities(context.Context) core.Capabilities {
 	return core.Capabilities{Provider: a.Name, ContractVersion: "1", Capabilities: []core.Capability{{
 		Operation: "payment", Countries: []string{"XX"}, Currencies: []string{"XXX"},
 		PaymentMethods: []string{"bank_transfer"}, Rails: []string{"replace_me"},
+		DataRequirements: []core.DataRequirement{{Path: "customer.documentNumber", Presence: "required"}},
 	}}}
 }
 func (Adapter) CreatePayment(context.Context, core.CreatePaymentCommand) (core.ProviderPayment, error) {
