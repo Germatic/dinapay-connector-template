@@ -153,6 +153,7 @@ type Capabilities struct {
 }
 
 type Capability struct {
+	CapabilityID          string              `json:"capabilityId,omitempty"`
 	Operation             string              `json:"operation"`
 	Countries             []string            `json:"countries"`
 	Currencies            []string            `json:"currencies,omitempty"`

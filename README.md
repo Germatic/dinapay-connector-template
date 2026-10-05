@@ -38,18 +38,22 @@ making it mandatory for real provider adapters. A connector that supports it:
 
 1. implements `core.SimulationAdapter`;
 2. advertises supported scenarios on the exact capability through
-   `capability.simulation`;
-3. persists idempotency using the simulation store operations; and
-4. publishes an ordinary normalized provider event after accepting a command.
+   `capability.simulation` and gives that capability a stable `capabilityId`;
+3. declares the versioned behavior in `contracts/simulation-profile.json`;
+4. persists idempotency using the simulation store operations; and
+5. publishes an ordinary normalized provider event after accepting a command.
 
 `POST /v1/payments/{providerPaymentId}/simulate` is registered only when
 `DINARIA_ENVIRONMENT=sandbox`. Production returns 404 even when the adapter
 implements simulation. The adapter must still reject undeclared scenarios and
 delays greater than its advertised maximum.
 
-Provider sandboxes do not need to implement this extension. Dinaria's generic
-simulator connector uses it to cover canonical payment methods without
-duplicating simulation behavior in every provider integration.
+The same provider connector handles real and simulated execution; there is no
+generic simulator connector. Control Plane selects the mode on the sandbox
+provider connection, and Routing keeps selecting the normal provider. A shared
+simulation kit may provide canonical QR, bank-transfer, redirect, cash and card
+generators, while this connector owns its profile and provider-specific rules.
+Provider failures must never cause an automatic fallback to simulation.
 
 Provider-specific code should normally be limited to:
 
