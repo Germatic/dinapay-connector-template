@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -36,6 +37,9 @@ func New(service *app.Service, token string) http.Handler {
 	mux.HandleFunc("POST /v1/payments", s.auth(s.createPayment))
 	mux.HandleFunc("GET /v1/payments/{providerPaymentId}", s.auth(s.getPayment))
 	mux.HandleFunc("POST /v1/payments/{providerPaymentId}/cancel", s.auth(s.cancelPayment))
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("DINARIA_ENVIRONMENT")), "sandbox") {
+		mux.HandleFunc("POST /v1/payments/{providerPaymentId}/simulate", s.auth(s.simulatePayment))
+	}
 	mux.HandleFunc("POST /v1/payments/{providerPaymentId}/refunds", s.auth(s.createRefund))
 	mux.HandleFunc("GET /v1/refunds/{providerRefundId}", s.auth(s.getRefund))
 	mux.HandleFunc("POST /v1/payouts", s.auth(s.createPayout))
@@ -122,6 +126,22 @@ func (s *Server) cancelPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, 200, result)
+}
+func (s *Server) simulatePayment(w http.ResponseWriter, r *http.Request) {
+	var cmd core.SimulatePaymentCommand
+	if err := decode(w, r, &cmd); err != nil {
+		problem(w, 400, "invalid_request", err.Error())
+		return
+	}
+	result, replayed, err := s.service.SimulatePayment(r.Context(), r.PathValue("providerPaymentId"), r.Header.Get("Idempotency-Key"), cmd)
+	if err != nil {
+		mapError(w, err)
+		return
+	}
+	if replayed {
+		w.Header().Set("Idempotent-Replayed", "true")
+	}
+	write(w, http.StatusAccepted, result)
 }
 func (s *Server) createRefund(w http.ResponseWriter, r *http.Request) {
 	var cmd core.CreateRefundCommand

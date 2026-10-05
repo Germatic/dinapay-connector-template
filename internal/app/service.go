@@ -68,6 +68,44 @@ func (s *Service) GetPayment(ctx context.Context, connection, id string) (core.P
 	return result, err
 }
 
+func (s *Service) SimulatePayment(ctx context.Context, providerPaymentID, key string, cmd core.SimulatePaymentCommand) (core.SimulationAccepted, bool, error) {
+	if key == "" || cmd.OperationID == "" || cmd.TransactionID == "" || cmd.ProviderConnectionID == "" || cmd.Scenario == "" || cmd.DelaySeconds < 0 || cmd.DelaySeconds > 3600 {
+		return core.SimulationAccepted{}, false, core.ErrRejected
+	}
+	provider, ok := s.provider.(core.SimulationAdapter)
+	if !ok {
+		return core.SimulationAccepted{}, false, core.ErrUnsupported
+	}
+	existing, err := s.store.ReserveSimulation(ctx, cmd.ProviderConnectionID, key, hash(cmd))
+	if errors.Is(err, core.ErrInProgress) {
+		result, recoverErr := provider.RecoverSimulation(ctx, providerPaymentID, cmd)
+		if recoverErr != nil {
+			return core.SimulationAccepted{}, false, recoverErr
+		}
+		if recoverErr = s.store.CompleteSimulation(ctx, cmd.ProviderConnectionID, key, result); recoverErr != nil {
+			return core.SimulationAccepted{}, false, recoverErr
+		}
+		return result, true, nil
+	}
+	if err != nil {
+		return core.SimulationAccepted{}, false, err
+	}
+	if existing != nil {
+		return *existing, true, nil
+	}
+	result, err := provider.SimulatePayment(ctx, providerPaymentID, cmd)
+	if err != nil {
+		if !errors.Is(err, core.ErrUnavailable) {
+			_ = s.store.FailSimulation(context.WithoutCancel(ctx), cmd.ProviderConnectionID, key)
+		}
+		return core.SimulationAccepted{}, false, err
+	}
+	if err = s.store.CompleteSimulation(ctx, cmd.ProviderConnectionID, key, result); err != nil {
+		return core.SimulationAccepted{}, false, err
+	}
+	return result, false, nil
+}
+
 func (s *Service) CancelPayment(ctx context.Context, id string, cmd core.CancelPaymentCommand) (core.ProviderPayment, error) {
 	return s.provider.CancelPayment(ctx, cmd, id)
 }

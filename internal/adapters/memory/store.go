@@ -15,15 +15,16 @@ type operation[T any] struct {
 }
 
 type Store struct {
-	mu       sync.RWMutex
-	payments map[string]operation[core.ProviderPayment]
-	refunds  map[string]operation[core.ProviderRefund]
-	payouts  map[string]operation[core.ProviderPayout]
-	events   map[string]bool
+	mu          sync.RWMutex
+	payments    map[string]operation[core.ProviderPayment]
+	simulations map[string]operation[core.SimulationAccepted]
+	refunds     map[string]operation[core.ProviderRefund]
+	payouts     map[string]operation[core.ProviderPayout]
+	events      map[string]bool
 }
 
 func New() *Store {
-	return &Store{payments: map[string]operation[core.ProviderPayment]{}, refunds: map[string]operation[core.ProviderRefund]{}, payouts: map[string]operation[core.ProviderPayout]{}, events: map[string]bool{}}
+	return &Store{payments: map[string]operation[core.ProviderPayment]{}, simulations: map[string]operation[core.SimulationAccepted]{}, refunds: map[string]operation[core.ProviderRefund]{}, payouts: map[string]operation[core.ProviderPayout]{}, events: map[string]bool{}}
 }
 
 func scope(connection, key string) string { return connection + ":" + key }
@@ -73,6 +74,42 @@ func (s *Store) FindPayment(_ context.Context, connection, id string) (core.Prov
 		}
 	}
 	return core.ProviderPayment{}, core.ErrNotFound
+}
+func (s *Store) ReserveSimulation(_ context.Context, connection, key string, hash []byte) (*core.SimulationAccepted, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	k := scope(connection, key)
+	if op, ok := s.simulations[k]; ok {
+		if !bytes.Equal(op.hash, hash) {
+			return nil, core.ErrConflict
+		}
+		if !op.complete {
+			return nil, core.ErrInProgress
+		}
+		v := op.value
+		return &v, nil
+	}
+	s.simulations[k] = operation[core.SimulationAccepted]{hash: append([]byte(nil), hash...)}
+	return nil, nil
+}
+func (s *Store) CompleteSimulation(_ context.Context, connection, key string, value core.SimulationAccepted) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	k := scope(connection, key)
+	op, ok := s.simulations[k]
+	if !ok {
+		return core.ErrConflict
+	}
+	op.complete = true
+	op.value = value
+	s.simulations[k] = op
+	return nil
+}
+func (s *Store) FailSimulation(_ context.Context, connection, key string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.simulations, scope(connection, key))
+	return nil
 }
 func (s *Store) ReserveRefund(_ context.Context, connection, key string, hash []byte) (*core.ProviderRefund, error) {
 	s.mu.Lock()

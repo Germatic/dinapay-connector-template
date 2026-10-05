@@ -35,6 +35,29 @@ type CancelPaymentCommand struct {
 	Reason               string `json:"reason,omitempty"`
 }
 
+type SimulationSupport struct {
+	Scenarios           []string `json:"scenarios"`
+	MaximumDelaySeconds int      `json:"maximumDelaySeconds,omitempty"`
+}
+
+type SimulatePaymentCommand struct {
+	OperationID          string         `json:"operationId"`
+	TransactionID        string         `json:"transactionId"`
+	ProviderConnectionID string         `json:"providerConnectionId"`
+	Scenario             string         `json:"scenario"`
+	DelaySeconds         int            `json:"delaySeconds,omitempty"`
+	Payer                map[string]any `json:"payer,omitempty"`
+	ProviderData         map[string]any `json:"providerData,omitempty"`
+}
+
+type SimulationAccepted struct {
+	SimulationID  string    `json:"simulationId"`
+	TransactionID string    `json:"transactionId"`
+	Scenario      string    `json:"scenario"`
+	Status        string    `json:"status"`
+	ScheduledAt   time.Time `json:"scheduledAt"`
+}
+
 type CreateRefundCommand struct {
 	OperationID          string         `json:"operationId"`
 	RefundID             string         `json:"refundId"`
@@ -139,6 +162,7 @@ type Capability struct {
 	Rails                 []string            `json:"rails"`
 	DestinationModes      []string            `json:"destinationModes,omitempty"`
 	Features              []string            `json:"features,omitempty"`
+	Simulation            *SimulationSupport  `json:"simulation,omitempty"`
 	BindingRequirement    *BindingRequirement `json:"bindingRequirement,omitempty"`
 }
 

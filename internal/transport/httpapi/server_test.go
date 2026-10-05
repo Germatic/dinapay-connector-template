@@ -48,3 +48,26 @@ func TestOperationalEndpoints(t *testing.T) {
 		}
 	})
 }
+
+func TestSimulationRouteOnlyExistsInSandbox(t *testing.T) {
+	request := func(handler http.Handler) int {
+		recorder := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/v1/payments/provider-payment-1/simulate", strings.NewReader(`{"operationId":"op-1","transactionId":"tx-1","providerConnectionId":"connection-1","scenario":"payment.confirmed"}`))
+		req.Header.Set("Authorization", "Bearer secret")
+		req.Header.Set("Idempotency-Key", "simulation-key-1")
+		handler.ServeHTTP(recorder, req)
+		return recorder.Code
+	}
+
+	t.Setenv("DINARIA_ENVIRONMENT", "production")
+	production := New(app.New(example.Adapter{Name: "example"}, memory.New(), nil), "secret")
+	if status := request(production); status != http.StatusNotFound {
+		t.Fatalf("production status=%d", status)
+	}
+
+	t.Setenv("DINARIA_ENVIRONMENT", "sandbox")
+	sandbox := New(app.New(example.Adapter{Name: "example"}, memory.New(), nil), "secret")
+	if status := request(sandbox); status != http.StatusUnprocessableEntity {
+		t.Fatalf("sandbox status=%d", status)
+	}
+}
