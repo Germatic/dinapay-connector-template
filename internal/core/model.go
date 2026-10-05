@@ -15,6 +15,7 @@ type CreatePaymentCommand struct {
 	TransactionID        string            `json:"transactionId"`
 	Provider             string            `json:"provider"`
 	ProviderConnectionID string            `json:"providerConnectionId"`
+	ExecutionMode        string            `json:"executionMode,omitempty"`
 	Binding              *Binding          `json:"binding,omitempty"`
 	Amount               string            `json:"amount"`
 	Currency             string            `json:"currency"`
@@ -35,11 +36,35 @@ type CancelPaymentCommand struct {
 	Reason               string `json:"reason,omitempty"`
 }
 
+type SimulationSupport struct {
+	Scenarios           []string `json:"scenarios"`
+	MaximumDelaySeconds int      `json:"maximumDelaySeconds,omitempty"`
+}
+
+type SimulatePaymentCommand struct {
+	OperationID          string         `json:"operationId"`
+	TransactionID        string         `json:"transactionId"`
+	ProviderConnectionID string         `json:"providerConnectionId"`
+	Scenario             string         `json:"scenario"`
+	DelaySeconds         int            `json:"delaySeconds,omitempty"`
+	Payer                map[string]any `json:"payer,omitempty"`
+	ProviderData         map[string]any `json:"providerData,omitempty"`
+}
+
+type SimulationAccepted struct {
+	SimulationID  string    `json:"simulationId"`
+	TransactionID string    `json:"transactionId"`
+	Scenario      string    `json:"scenario"`
+	Status        string    `json:"status"`
+	ScheduledAt   time.Time `json:"scheduledAt"`
+}
+
 type CreateRefundCommand struct {
 	OperationID          string         `json:"operationId"`
 	RefundID             string         `json:"refundId"`
 	TransactionID        string         `json:"transactionId"`
 	ProviderConnectionID string         `json:"providerConnectionId"`
+	ExecutionMode        string         `json:"executionMode,omitempty"`
 	Amount               string         `json:"amount"`
 	Currency             string         `json:"currency"`
 	Reason               string         `json:"reason,omitempty"`
@@ -65,6 +90,7 @@ type CreatePayoutCommand struct {
 	MerchantID           string            `json:"merchantId"`
 	Provider             string            `json:"provider"`
 	ProviderConnectionID string            `json:"providerConnectionId"`
+	ExecutionMode        string            `json:"executionMode,omitempty"`
 	Binding              *Binding          `json:"binding,omitempty"`
 	Source               Money             `json:"source"`
 	Destination          PayoutDestination `json:"destination"`
@@ -130,6 +156,7 @@ type Capabilities struct {
 }
 
 type Capability struct {
+	CapabilityID          string              `json:"capabilityId,omitempty"`
 	Operation             string              `json:"operation"`
 	Countries             []string            `json:"countries"`
 	Currencies            []string            `json:"currencies,omitempty"`
@@ -139,6 +166,7 @@ type Capability struct {
 	Rails                 []string            `json:"rails"`
 	DestinationModes      []string            `json:"destinationModes,omitempty"`
 	Features              []string            `json:"features,omitempty"`
+	Simulation            *SimulationSupport  `json:"simulation,omitempty"`
 	BindingRequirement    *BindingRequirement `json:"bindingRequirement,omitempty"`
 }
 

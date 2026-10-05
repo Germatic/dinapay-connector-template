@@ -31,11 +31,21 @@ type ProviderAdapter interface {
 	ParseWebhook(context.Context, RawWebhook) ([]ProviderEvent, error)
 }
 
+// SimulationAdapter is optional. Real provider connectors do not need to
+// implement it; deterministic sandbox connectors advertise and implement it.
+type SimulationAdapter interface {
+	SimulatePayment(context.Context, string, SimulatePaymentCommand) (SimulationAccepted, error)
+	RecoverSimulation(context.Context, string, SimulatePaymentCommand) (SimulationAccepted, error)
+}
+
 type Store interface {
 	ReservePayment(context.Context, string, string, []byte) (*ProviderPayment, error)
 	CompletePayment(context.Context, string, ProviderPayment) error
 	FailPayment(context.Context, string, string) error
 	FindPayment(context.Context, string, string) (ProviderPayment, error)
+	ReserveSimulation(context.Context, string, string, []byte) (*SimulationAccepted, error)
+	CompleteSimulation(context.Context, string, string, SimulationAccepted) error
+	FailSimulation(context.Context, string, string) error
 	ReserveRefund(context.Context, string, string, []byte) (*ProviderRefund, error)
 	CompleteRefund(context.Context, string, ProviderRefund) error
 	FailRefund(context.Context, string, string) error

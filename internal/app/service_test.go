@@ -7,6 +7,7 @@ import (
 
 	"github.com/Germatic/dinapay-connector-template/internal/adapters/memory"
 	"github.com/Germatic/dinapay-connector-template/internal/core"
+	"github.com/Germatic/dinapay-connector-template/internal/provider/example"
 )
 
 type providerStub struct {
@@ -16,6 +17,7 @@ type providerStub struct {
 	payoutCreates   int
 	payoutCreateErr error
 	payoutRecovered core.ProviderPayout
+	simulations     int
 }
 
 func (providerStub) Capabilities(context.Context) core.Capabilities {
@@ -39,6 +41,13 @@ func (providerStub) GetPayment(context.Context, string, string) (core.ProviderPa
 }
 func (providerStub) CancelPayment(context.Context, core.CancelPaymentCommand, string) (core.ProviderPayment, error) {
 	return core.ProviderPayment{}, core.ErrUnsupported
+}
+func (p *providerStub) SimulatePayment(_ context.Context, _ string, c core.SimulatePaymentCommand) (core.SimulationAccepted, error) {
+	p.simulations++
+	return core.SimulationAccepted{SimulationID: "simulation-1", TransactionID: c.TransactionID, Scenario: c.Scenario, Status: "accepted", ScheduledAt: time.Now()}, nil
+}
+func (p *providerStub) RecoverSimulation(_ context.Context, _ string, c core.SimulatePaymentCommand) (core.SimulationAccepted, error) {
+	return core.SimulationAccepted{SimulationID: "simulation-1", TransactionID: c.TransactionID, Scenario: c.Scenario, Status: "accepted", ScheduledAt: time.Now()}, nil
 }
 func (providerStub) CreateRefund(context.Context, string, core.CreateRefundCommand) (core.ProviderRefund, error) {
 	return core.ProviderRefund{}, core.ErrUnsupported
@@ -103,6 +112,32 @@ func TestCreatePaymentIdempotency(t *testing.T) {
 	_, _, err = s.CreatePayment(context.Background(), "key-1", cmd)
 	if err != core.ErrConflict {
 		t.Fatalf("conflict err=%v", err)
+	}
+}
+
+func TestSimulatePaymentIdempotency(t *testing.T) {
+	p := &providerStub{}
+	s := New(p, memory.New(), nil)
+	cmd := core.SimulatePaymentCommand{OperationID: "operation-1", TransactionID: "transaction-1", ProviderConnectionID: "connection-1", Scenario: "payment.confirmed"}
+	first, replayed, err := s.SimulatePayment(context.Background(), "provider-payment-1", "simulation-key-1", cmd)
+	if err != nil || replayed || first.Status != "accepted" {
+		t.Fatalf("first=%#v replayed=%v err=%v", first, replayed, err)
+	}
+	second, replayed, err := s.SimulatePayment(context.Background(), "provider-payment-1", "simulation-key-1", cmd)
+	if err != nil || !replayed || second.SimulationID != first.SimulationID || p.simulations != 1 {
+		t.Fatalf("second=%#v replayed=%v calls=%d err=%v", second, replayed, p.simulations, err)
+	}
+	cmd.Scenario = "payment.expired"
+	if _, _, err = s.SimulatePayment(context.Background(), "provider-payment-1", "simulation-key-1", cmd); err != core.ErrConflict {
+		t.Fatalf("conflict err=%v", err)
+	}
+}
+
+func TestSimulationIsOptional(t *testing.T) {
+	s := New(example.Adapter{Name: "example"}, memory.New(), nil)
+	cmd := core.SimulatePaymentCommand{OperationID: "operation-1", TransactionID: "transaction-1", ProviderConnectionID: "connection-1", Scenario: "payment.confirmed"}
+	if _, _, err := s.SimulatePayment(context.Background(), "provider-payment-1", "simulation-key-1", cmd); err != core.ErrUnsupported {
+		t.Fatalf("err=%v", err)
 	}
 }
 

@@ -14,6 +14,31 @@ jq -e '
   ([.capabilities[] | (.operation | IN("payment", "refund", "payout"))] | all)
 ' contracts/capabilities.json >/dev/null
 
+jq -e --slurpfile capabilities contracts/capabilities.json '
+  .schemaVersion == "1" and
+  (.provider | type == "string" and length > 0) and
+  (.provider == $capabilities[0].provider) and
+  (.profiles | type == "array") and
+  ([.profiles[] |
+    (.profileId | type == "string" and test("^[a-z0-9][a-z0-9._-]+$")) and
+    (.version | type == "number" and . >= 1 and floor == .) and
+    (.capabilityId | type == "string" and length > 0) and
+    (.generator | IN("qr", "bank_transfer", "redirect", "cash", "hosted_card")) and
+    (.allowedScenarios | type == "array" and length > 0) and
+    ([.allowedScenarios[] | IN("payment.pending", "payment.confirmed", "payment.rejected", "payment.expired")] | all) and
+    ((.maximumDelaySeconds // 0) >= 0 and (.maximumDelaySeconds // 0) <= 3600) and
+    (.capabilityId as $id | any($capabilities[0].capabilities[]; .capabilityId == $id and .simulation != null))
+  ] | all) and
+  ([.profiles[] | "\(.profileId)@\(.version)"] | length == (unique | length))
+' contracts/simulation-profile.json >/dev/null
+
+jq -e --slurpfile profiles contracts/simulation-profile.json '
+  [.capabilities[] | select(.simulation != null) |
+    (.capabilityId | type == "string" and length > 0) and
+    (.capabilityId as $id | any($profiles[0].profiles[]; .capabilityId == $id))
+  ] | all
+' contracts/capabilities.json >/dev/null
+
 jq -e '
   .schemaVersion == "1" and
   (.provider | type == "string" and length > 0) and
