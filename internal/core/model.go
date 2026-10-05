@@ -15,6 +15,7 @@ type CreatePaymentCommand struct {
 	TransactionID        string            `json:"transactionId"`
 	Provider             string            `json:"provider"`
 	ProviderConnectionID string            `json:"providerConnectionId"`
+	ExecutionMode        string            `json:"executionMode,omitempty"`
 	Binding              *Binding          `json:"binding,omitempty"`
 	Amount               string            `json:"amount"`
 	Currency             string            `json:"currency"`
@@ -63,6 +64,7 @@ type CreateRefundCommand struct {
 	RefundID             string         `json:"refundId"`
 	TransactionID        string         `json:"transactionId"`
 	ProviderConnectionID string         `json:"providerConnectionId"`
+	ExecutionMode        string         `json:"executionMode,omitempty"`
 	Amount               string         `json:"amount"`
 	Currency             string         `json:"currency"`
 	Reason               string         `json:"reason,omitempty"`
@@ -88,6 +90,7 @@ type CreatePayoutCommand struct {
 	MerchantID           string            `json:"merchantId"`
 	Provider             string            `json:"provider"`
 	ProviderConnectionID string            `json:"providerConnectionId"`
+	ExecutionMode        string            `json:"executionMode,omitempty"`
 	Binding              *Binding          `json:"binding,omitempty"`
 	Source               Money             `json:"source"`
 	Destination          PayoutDestination `json:"destination"`

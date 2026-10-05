@@ -71,3 +71,16 @@ func TestSimulationRouteOnlyExistsInSandbox(t *testing.T) {
 		t.Fatalf("sandbox status=%d", status)
 	}
 }
+
+func TestSimulatedCreateIsRejectedOutsideSandbox(t *testing.T) {
+	t.Setenv("DINARIA_ENVIRONMENT", "production")
+	handler := New(app.New(example.Adapter{Name: "example"}, memory.New(), nil), "secret")
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/v1/payments", strings.NewReader(`{"operationId":"op-1","transactionId":"tx-1","provider":"example","providerConnectionId":"connection-1","executionMode":"simulated","amount":"1.00","currency":"USD","paymentMethod":"bank_transfer","customer":{}}`))
+	request.Header.Set("Authorization", "Bearer secret")
+	request.Header.Set("Idempotency-Key", "payment-key-1")
+	handler.ServeHTTP(recorder, request)
+	if recorder.Code != http.StatusUnprocessableEntity || !strings.Contains(recorder.Body.String(), "simulation_not_available") {
+		t.Fatalf("status=%d body=%s", recorder.Code, recorder.Body.String())
+	}
+}

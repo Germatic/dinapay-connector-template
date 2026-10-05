@@ -21,11 +21,13 @@ type Server struct {
 	service      *app.Service
 	serviceToken string
 	startedAt    time.Time
+	sandbox      bool
 	requests     atomic.Uint64
 }
 
 func New(service *app.Service, token string) http.Handler {
-	s := &Server{service: service, serviceToken: token, startedAt: time.Now()}
+	sandbox := strings.EqualFold(strings.TrimSpace(os.Getenv("DINARIA_ENVIRONMENT")), "sandbox")
+	s := &Server{service: service, serviceToken: token, startedAt: time.Now(), sandbox: sandbox}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		write(w, 200, map[string]any{"status": "up", "build": buildinfo.Current()})
@@ -37,7 +39,7 @@ func New(service *app.Service, token string) http.Handler {
 	mux.HandleFunc("POST /v1/payments", s.auth(s.createPayment))
 	mux.HandleFunc("GET /v1/payments/{providerPaymentId}", s.auth(s.getPayment))
 	mux.HandleFunc("POST /v1/payments/{providerPaymentId}/cancel", s.auth(s.cancelPayment))
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("DINARIA_ENVIRONMENT")), "sandbox") {
+	if sandbox {
 		mux.HandleFunc("POST /v1/payments/{providerPaymentId}/simulate", s.auth(s.simulatePayment))
 	}
 	mux.HandleFunc("POST /v1/payments/{providerPaymentId}/refunds", s.auth(s.createRefund))
@@ -94,6 +96,9 @@ func (s *Server) createPayment(w http.ResponseWriter, r *http.Request) {
 		problem(w, 400, "invalid_request", err.Error())
 		return
 	}
+	if !s.executionMode(w, &cmd.ExecutionMode) {
+		return
+	}
 	result, replayed, err := s.service.CreatePayment(r.Context(), r.Header.Get("Idempotency-Key"), cmd)
 	if err != nil {
 		mapError(w, err)
@@ -105,6 +110,21 @@ func (s *Server) createPayment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	write(w, 201, result)
+}
+
+func (s *Server) executionMode(w http.ResponseWriter, mode *string) bool {
+	if *mode == "" {
+		*mode = "provider"
+	}
+	if *mode != "provider" && *mode != "simulated" {
+		problem(w, http.StatusBadRequest, "invalid_request", "executionMode must be provider or simulated")
+		return false
+	}
+	if *mode == "simulated" && !s.sandbox {
+		problem(w, http.StatusUnprocessableEntity, "simulation_not_available", "simulated execution is available only in sandbox")
+		return false
+	}
+	return true
 }
 func (s *Server) getPayment(w http.ResponseWriter, r *http.Request) {
 	result, err := s.service.GetPayment(r.Context(), r.Header.Get("Provider-Connection-Id"), r.PathValue("providerPaymentId"))
